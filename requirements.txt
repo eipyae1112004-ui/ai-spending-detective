@@ -1,0 +1,7 @@
+streamlit==1.38.0
+pandas==2.2.2
+sqlalchemy==2.0.32
+anthropic==1.5.0
+plotly==5.24.0
+python-dotenv==1.0.1
+pdfplumber==0.11.4
