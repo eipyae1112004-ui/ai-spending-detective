@@ -30,7 +30,7 @@ Run it yourself with `streamlit run app.py` — see **Quickstart** below. (Demo 
 | AI agent | Anthropic Claude API (tool-use for structured output) |
 | Dashboard | Streamlit |
 | Charts | Plotly |
-| Map | Streamlit's native `st.map` (Carto basemap) |
+| Map | Plotly (`scatter_mapbox`, free OpenStreetMap tiles) |
 | Statement parsing | pandas (CSV), pdfplumber (PDF) |
 
 ## Project structure
@@ -57,11 +57,36 @@ cd ai-spending-detective
 python -m venv venv
 venv\Scripts\activate        # Windows — use `source venv/bin/activate` on macOS/Linux
 pip install -r requirements.txt
-copy .env.example .env       # then add your Anthropic API key (console.anthropic.com)
+copy .env.example .env
+```
+
+**⚠️ Stop here and actually edit `.env` before continuing.** Open it and replace the placeholder line:
+
+```
+ANTHROPIC_API_KEY=your-key-here
+```
+
+with a real key from [console.anthropic.com](https://console.anthropic.com). It is easy to just copy the file and move on without editing it — if you do, the app will run and *look* fine right up until you click "Run AI agent," at which point it fails with:
+
+```
+AuthenticationError: Error code: 401 - invalid x-api-key
+```
+
+That error means exactly one thing: `.env` still has the placeholder text instead of a real key (`.env` and `.env.example` being the same file size is the tell — check with `wc -c .env .env.example` and compare). Fix `.env`, save, then continue:
+
+```bash
 streamlit run app.py
 ```
 
-Then in the browser: click **"Generate demo month (synthetic)"** in the sidebar, then **"Run AI agent"** — the whole pipeline runs against realistic fake data in seconds. To use real data instead, upload a bank CSV export.
+Then in the browser: click **"Generate demo month (synthetic)"** in the sidebar, then **"🤖 Run AI agent"** — the whole pipeline runs against realistic fake data in seconds. To use real data instead, upload a bank CSV export. A plain `Date, Description, Amount` export (no category column) is exactly what's expected — no bank provides categories, that's what the AI agent step fills in.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `AuthenticationError: invalid x-api-key` when running the AI agent | `.env` still has the placeholder instead of a real key | Edit `.env`, replace `your-key-here` with your actual Anthropic API key |
+| "No categorized expenses found" when generating a budget recommendation | You imported data but never clicked "Run AI agent" | Run the AI agent first — budgets are recommended from *categorized* spending, and raw imports start uncategorized by design |
+| Uploaded CSV has no category column and that seems wrong | It isn't — this is expected | No bank export includes categories; that's the AI agent's job, not the import step's |
 
 ## Known limitations / future work
 
@@ -82,3 +107,4 @@ Then in the browser: click **"Generate demo month (synthetic)"** in the sidebar,
 - **Stage 8 — Polish:** portfolio-ready README, verified `requirements.txt` covers every import, documented known limitations honestly rather than glossing over them.
 - **Post-launch refinements (from user feedback after a walkthrough):** added a "Daily net cash flow" bar chart with plain-language captions on every chart explaining what it shows; switched the map from `st.map` to `px.scatter_mapbox` (still free/tokenless, via `mapbox_style="open-street-map"`) so it supports proper hover tooltips (merchant, amount, category, location) instead of just colored dots.
 - **Stage 9 — AI budget recommendation:** `recommend_budgets()` in `src/agent.py` analyzes one month's actual income and per-category spending, then acts like a financial advisor to recommend next month's budget — keeping essential categories (groceries, utilities, transport) close to actual, trimming discretionary ones (shopping, dining) when spending outpaced income. Saves straight into the `budgets` table and displays an actual-vs-recommended comparison table and chart. Hit and fixed a real bug: Streamlit's markdown renderer treats text between two `$` signs as LaTeX math, so a reasoning string with two dollar amounts (e.g. "$3,899.63 ... $2,200") rendered as garbled math notation instead of plain text — fixed with a `md_safe()` helper that escapes `$` before display, applied everywhere AI-generated reasoning is shown.
+- **Real-world test, fresh clone:** cloned the pushed repo to a separate folder and set it up from the README alone (the way a stranger/recruiter would). Hit exactly the failure mode a rushed setup produces: copied `.env.example` to `.env` without editing it, so the app sent the literal placeholder string as the API key and failed with `AuthenticationError: invalid x-api-key` on the first AI agent call — easy to misread as a data/CSV problem since the error only surfaces later, not at import time. Tightened the Quickstart to call this out explicitly and added a Troubleshooting table.
